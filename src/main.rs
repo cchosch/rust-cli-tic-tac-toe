@@ -2,18 +2,22 @@ use std::io::{stdout, stdin, Write};
 
 
 struct TTTBoard {
-    size : i64
+    size : i64,
+    board :[[i64; 3]; 3],
 }
 
 impl Default for TTTBoard{
     fn default() -> TTTBoard {
         TTTBoard{
-            size:9
+            size: 9,
+            board: [[0,0,0],[0,0,0],[0,0,0]]
         }
     }
 }
 
 impl TTTBoard{
+    fn makeMove(&mut self, pos: (i64, i64)) {
+    }
 }
 
 
