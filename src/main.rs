@@ -36,28 +36,34 @@ impl fmt::Display for BoardState{
     }
 }
 
+
 impl TTTBoard{
     fn make_move(&mut self, pos: (i8, i8), newstate: BoardState) {
         
     }
-    fn print_board(&mut self){
-        for row in self.board.iter().enumerate(){
-            //for state in self.board[row].iter().enumerate(){
-            //    println!("{}, {}", row, state);
-            //}
+}
+
+impl fmt::Display for TTTBoard{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
+        writeln!(f, "-------------");
+        for row in self.board.iter(){
+            write!(f, "|");
+            for state in row.iter(){
+                write!(f, " {} |", state);
+            }
+            writeln!(f, "\n-------------");
         }
+        return Ok(())
     }
 }
 
-
 fn main() {
-    println!("Tic tac toe in Rust vs AI");
+    println!("Tic tac toe in Rust vs UNBEATABLE AI");
     let mut line;
     let mut board = TTTBoard{.. Default::default()};
-    let bs = BoardState::O;
-    println!("{}", bs);
-    board.print_board();
+    
     loop {
+        println!("Make a move x,y");
         match stdout().flush() {
             Ok(_) => {},
             Err(e) =>{ println!("ERROR {}", e);}
@@ -65,7 +71,22 @@ fn main() {
         line = String::new();
         stdin().read_line(&mut line).unwrap();
         line = String::from(line.trim());
-        println!("{}", line);
+        let mut newpos : Vec<&str> = line.split(",").collect();
+        if newpos.len() != 2{ continue; }
+        newpos[0] = newpos[0].trim();
+        newpos[1] = newpos[1].trim();
+        let x; 
+        let y;
+        match newpos[0].parse::<i32>(){
+            Ok(o) => x = o,
+            Err(e) => continue,
+        }
+        match newpos[1].parse::<i32>(){
+            Ok(o) => y = o,
+            Err(e) => continue,
+        }
+        println!("({}, {})", x, y);
+        println!("{}", board);
         if line == "q"{
             break;
         }
