@@ -8,11 +8,26 @@ enum BoardState  {
     X
 }
 
-
 struct TTTBoard {
     board :[[BoardState; 3]; 3],
 }
 
+impl Clone for TTTBoard{
+    fn clone(&self) -> Self{
+        let mut newboard = TTTBoard{..Default::default()};
+        for row in self.board.iter().enumerate(){
+            for state in row.1.iter().enumerate(){
+                match state.1{
+                    BoardState::O => newboard.board[row.0][state.0] = BoardState::O,
+                    BoardState::X => newboard.board[row.0][state.0] = BoardState::X,
+                    BoardState::Empty => newboard.board[row.0][state.0] = BoardState::Empty,
+                }
+                //
+            }
+        }
+        return newboard;
+    }
+}
 
 impl PartialEq for BoardState{
     fn eq(&self, other : &Self) -> bool{
@@ -101,6 +116,8 @@ fn main() {
     println!("Tic tac toe in Rust vs UNBEATABLE AI");
     let mut line;
     let mut board = TTTBoard{.. Default::default()};
+    minimax(&mut board, 0); // 
+    return;
     let mut x; 
     let mut y;
     let mut win_yet = &BoardState::Empty;
@@ -128,7 +145,6 @@ fn main() {
         
         board.make_move((x, y), BoardState::O);
         win_yet = board.winner();
-
         match *win_yet {
             BoardState::Empty => {},
             BoardState::O | BoardState::X => {
@@ -153,10 +169,21 @@ fn main() {
         }
     }
 
-    minimax(); // 
+    let mut boardc = board.clone();
 }
 
 
-fn minimax(&mut board:TTTBoard){
-    
+fn minimax(board:&mut TTTBoard, levels:usize){
+    for row in board.board.iter(){
+        for state in row.iter(){
+            if *state == BoardState::Empty{
+
+            }
+        }
+    }
+    if levels == 2{
+        return
+    }
+    minimax(board, levels+1);
 }
+
