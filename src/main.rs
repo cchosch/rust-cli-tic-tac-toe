@@ -16,7 +16,17 @@ struct TTTBoard {
 
 impl PartialEq for BoardState{
     fn eq(&self, other : &Self) -> bool{
-
+        let f: i8;
+        match self{
+            BoardState::O => f = 1,
+            BoardState::X => f = 2,
+            BoardState::Empty => f = 0,
+        }match other{
+            BoardState::O => if f == 1 {return true},
+            BoardState::X => if f == 2 {return true},
+            BoardState::Empty => if f == 0 {return true},
+        }
+        return false
     }
 }
 
@@ -32,16 +42,13 @@ impl Default for TTTBoard{
 
 impl fmt::Display for TTTBoard{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
-        writeln!(f, "-------------");
+        writeln!(f, "-------------").ok();
         for row in self.board.iter(){
-            write!(f, "|");
+            write!(f, "|").ok();
             for state in row.iter(){
-                match write!(f, " {} |", state){
-                    Ok(o) => {},
-                    Err(e) => return Err(e),
-                }
+                write!(f, " {} |", state).ok();
             }
-            writeln!(f, "\n-------------");
+            writeln!(f, "\n-------------").ok();
         }
         return Ok(())
     }
@@ -54,7 +61,6 @@ impl fmt::Display for BoardState{
             BoardState::Empty => write!(f, " "),
             BoardState::X => write!(f, "X"),
             BoardState::O => write!(f, "O"),
-            _ => return Err(fmt::Error),
         }
         
     }
@@ -65,11 +71,20 @@ impl TTTBoard{
     fn make_move(&mut self, pos: (usize, usize), newstate: BoardState) {
         self.board[pos.0][pos.1] = newstate;
     }
-    fn winner(&self, winstate : BoardState) -> &BoardState{
+    fn full(&self) -> bool{
+        for row in self.board.iter(){
+            for s in row.iter(){
+                if *s == BoardState::Empty{
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    fn winner(&self) -> &BoardState{
         let mut seen;
         for row in self.board.iter(){
             seen = &row[0];
-            println!("SEEN {}", seen);
             for state in row.iter().enumerate(){
                 if *state.1 == *seen && state.0 == self.board.len()-1{
                     return state.1;
@@ -77,19 +92,18 @@ impl TTTBoard{
             }
         }
         
-        return &BoardState::Empty
+        return &BoardState::Empty;
     }
 }
 
 
 fn main() {
-    //println!("{}", BoardState::O == BoardState::O);
-    return;
     println!("Tic tac toe in Rust vs UNBEATABLE AI");
     let mut line;
     let mut board = TTTBoard{.. Default::default()};
     let mut x; 
     let mut y;
+    let mut win_yet = &BoardState::Empty;
     
     loop {
         println!("Make a move x,y");
@@ -100,18 +114,39 @@ fn main() {
         line = String::new();
         stdin().read_line(&mut line).unwrap();
         line = String::from(line.trim());
-        let mut newpos : Vec<&str> = line.split(",").collect();
+        let newpos : Vec<&str> = line.split(",").collect();
         if newpos.len() != 2{ continue; }
         
         match newpos[0].trim().parse::<usize>(){
             Ok(o) => x = o,
-            Err(e) => continue,
+            Err(_) => continue,
         }
         match newpos[1].trim().parse::<usize>(){
             Ok(o) => y = o,
-            Err(e) => continue,
+            Err(_) => continue,
         }
+        
         board.make_move((x, y), BoardState::O);
+        win_yet = board.winner();
+
+        match *win_yet {
+            BoardState::Empty => {},
+            BoardState::O | BoardState::X => {
+                if *win_yet == BoardState::O{
+                    println!("YOU WON")
+                }
+                else if !(*win_yet == BoardState::O){
+                    println!("You Lost")
+                }
+            },
+            
+        }
+        if *win_yet != BoardState::Empty {
+            if board.full() {
+                println!("TIE");
+                break;
+            }
+        }
         println!("{}", board);
         if line == "q"{
             break;
@@ -122,6 +157,6 @@ fn main() {
 }
 
 
-fn minimax(){
+fn minimax(&mut board:TTTBoard){
     
 }
