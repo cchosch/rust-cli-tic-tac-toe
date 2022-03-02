@@ -1,8 +1,6 @@
 use std::io::{stdout, stdin, Write};
 use std::fmt;
-fn type_of<T>(_: &T) -> &str{
-    return std::any::type_name::<T>();
-}
+use std::cmp::PartialEq;
 
 enum BoardState  {
     Empty,
@@ -10,19 +8,45 @@ enum BoardState  {
     X
 }
 
+
 struct TTTBoard {
-    size : u32,
     board :[[BoardState; 3]; 3],
 }
+
+
+impl PartialEq for BoardState{
+    fn eq(&self, other : &Self) -> bool{
+
+    }
+}
+
 
 impl Default for TTTBoard{
     fn default() -> TTTBoard {
         TTTBoard{
-            size: 9,
             board: [[BoardState::Empty,BoardState::Empty,BoardState::Empty],[BoardState::Empty,BoardState::Empty,BoardState::Empty],[BoardState::Empty,BoardState::Empty,BoardState::Empty]] 
         }
     }
 }
+
+
+impl fmt::Display for TTTBoard{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
+        writeln!(f, "-------------");
+        for row in self.board.iter(){
+            write!(f, "|");
+            for state in row.iter(){
+                match write!(f, " {} |", state){
+                    Ok(o) => {},
+                    Err(e) => return Err(e),
+                }
+            }
+            writeln!(f, "\n-------------");
+        }
+        return Ok(())
+    }
+}
+
 
 impl fmt::Display for BoardState{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
@@ -38,29 +62,34 @@ impl fmt::Display for BoardState{
 
 
 impl TTTBoard{
-    fn make_move(&mut self, pos: (i8, i8), newstate: BoardState) {
+    fn make_move(&mut self, pos: (usize, usize), newstate: BoardState) {
+        self.board[pos.0][pos.1] = newstate;
+    }
+    fn winner(&self, winstate : BoardState) -> &BoardState{
+        let mut seen;
+        for row in self.board.iter(){
+            seen = &row[0];
+            println!("SEEN {}", seen);
+            for state in row.iter().enumerate(){
+                if *state.1 == *seen && state.0 == self.board.len()-1{
+                    return state.1;
+                }
+            }
+        }
         
+        return &BoardState::Empty
     }
 }
 
-impl fmt::Display for TTTBoard{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
-        writeln!(f, "-------------");
-        for row in self.board.iter(){
-            write!(f, "|");
-            for state in row.iter(){
-                write!(f, " {} |", state);
-            }
-            writeln!(f, "\n-------------");
-        }
-        return Ok(())
-    }
-}
 
 fn main() {
+    //println!("{}", BoardState::O == BoardState::O);
+    return;
     println!("Tic tac toe in Rust vs UNBEATABLE AI");
     let mut line;
     let mut board = TTTBoard{.. Default::default()};
+    let mut x; 
+    let mut y;
     
     loop {
         println!("Make a move x,y");
@@ -73,19 +102,16 @@ fn main() {
         line = String::from(line.trim());
         let mut newpos : Vec<&str> = line.split(",").collect();
         if newpos.len() != 2{ continue; }
-        newpos[0] = newpos[0].trim();
-        newpos[1] = newpos[1].trim();
-        let x; 
-        let y;
-        match newpos[0].parse::<i32>(){
+        
+        match newpos[0].trim().parse::<usize>(){
             Ok(o) => x = o,
             Err(e) => continue,
         }
-        match newpos[1].parse::<i32>(){
+        match newpos[1].trim().parse::<usize>(){
             Ok(o) => y = o,
             Err(e) => continue,
         }
-        println!("({}, {})", x, y);
+        board.make_move((x, y), BoardState::O);
         println!("{}", board);
         if line == "q"{
             break;
