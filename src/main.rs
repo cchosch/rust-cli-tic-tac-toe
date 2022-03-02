@@ -18,9 +18,7 @@ impl Clone for TTTBoard{
         for row in self.board.iter().enumerate(){
             for state in row.1.iter().enumerate(){
                 match state.1{
-                    BoardState::O => newboard.board[row.0][state.0] = BoardState::O,
-                    BoardState::X => newboard.board[row.0][state.0] = BoardState::X,
-                    BoardState::Empty => newboard.board[row.0][state.0] = BoardState::Empty,
+                    a => newboard.board[row.0][state.0] = *a,
                 }
                 //
             }
@@ -33,13 +31,9 @@ impl PartialEq for BoardState{
     fn eq(&self, other : &Self) -> bool{
         let f: i8;
         match self{
-            BoardState::O => f = 1,
-            BoardState::X => f = 2,
-            BoardState::Empty => f = 0,
-        }match other{
-            BoardState::O => if f == 1 {return true},
-            BoardState::X => if f == 2 {return true},
-            BoardState::Empty => if f == 0 {return true},
+            f => match other{
+                s => {if s == f{return true}}
+            }
         }
         return false
     }
@@ -81,6 +75,15 @@ impl fmt::Display for BoardState{
     }
 }
 
+impl BoardState{
+    fn opposite(&self) -> BoardState{
+        match self{
+            BoardState::O => return BoardState::X,
+            BoardState::X => return BoardState::O,
+            BoardState::Empty => return BoardState::Empty,
+        }
+    }
+}
 
 impl TTTBoard{
     fn make_move(&mut self, pos: (usize, usize), newstate: BoardState) {
@@ -106,7 +109,12 @@ impl TTTBoard{
                 }
             }
         }
-        
+        if self.board[0][0] == self.board[1][1] && self.board[1][1] == self.board[2][2]{
+            return &self.board[0][0];
+        }else if self.board[0][2] == self.board[1][1] && self.board[1][1] == self.board[2][0]{
+            return &self.board[1][1];
+        }
+            
         return &BoardState::Empty;
     }
 }
@@ -116,11 +124,9 @@ fn main() {
     println!("Tic tac toe in Rust vs UNBEATABLE AI");
     let mut line;
     let mut board = TTTBoard{.. Default::default()};
-    minimax(&mut board, 0); // 
-    return;
     let mut x; 
     let mut y;
-    let mut win_yet = &BoardState::Empty;
+    let mut win_yet;
     
     loop {
         println!("Make a move x,y");
@@ -149,11 +155,11 @@ fn main() {
             BoardState::Empty => {},
             BoardState::O | BoardState::X => {
                 if *win_yet == BoardState::O{
-                    println!("YOU WON")
+                    println!("YOU WON");
+                }else if !(*win_yet == BoardState::O){
+                    println!("You Lost");
                 }
-                else if !(*win_yet == BoardState::O){
-                    println!("You Lost")
-                }
+                break;
             },
             
         }
@@ -163,27 +169,74 @@ fn main() {
                 break;
             }
         }
+        minimax(&board);
         println!("{}", board);
         if line == "q"{
             break;
         }
     }
 
-    let mut boardc = board.clone();
 }
 
 
-fn minimax(board:&mut TTTBoard, levels:usize){
-    for row in board.board.iter(){
-        for state in row.iter(){
-            if *state == BoardState::Empty{
+fn minimax(board : &TTTBoard){
+    let mut boardc = board.clone();
+    
+    eval(&mut boardc, 0, BoardState::X);
+}
 
+
+fn eval(board : &mut TTTBoard, levels : usize, cstate : BoardState ) -> i8{
+    /**
+     * returns i8 
+     * 
+     * 0 = lose
+     * 1 = tie
+     * 2 = win 
+     * 
+     */
+    
+    if(board.full()){
+        match board.winner(){
+            BoardState::Empty => {return 1},
+            s => {
+                if cstate == *s{
+                    return 2
+                }
+                return 0
+            },
+        }
+    }
+    //          (best, (x, y))
+    let mut best = (0, (0, 0));
+    for row in board.board.iter().enumerate(){
+        for state in row.1.iter().enumerate(){ //(index, object)
+            if *state.1 == BoardState::Empty{
             }
         }
     }
-    if levels == 2{
-        return
-    }
-    minimax(board, levels+1);
+        board.board[row.0][state.0] = cstate;
+        let result = eval(board, levels+1, cstate.opposite());
+        if result > best.0{
+            best = (result, (row.0, state.0));
+        }
+        match cstate.opposite(){
+            BoardState::X =>{
+                if result == 0{
+                board.board[row.0][state.0] = BoardState::Empty;
+                }else if result == 2{
+                    return 2
+                }
+            },
+            BoardState::O =>{
+                if result == 2{
+                    board.board[row.0][state.0] = BoardState::Empty;
+                }else if result == 0{
+                    return 2
+                }
+            },
+            _ => {}
+        }
+    return 0
 }
 
