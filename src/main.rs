@@ -1,6 +1,8 @@
+#![recursion_limit= "2000000"]
+use std::cmp::PartialEq;
 use std::io::{stdout, stdin, Write};
 use std::fmt;
-use std::cmp::PartialEq;
+
 
 enum BoardState  {
     Empty,
@@ -12,15 +14,24 @@ struct TTTBoard {
     board :[[BoardState; 3]; 3],
 }
 
+impl Clone for BoardState{
+    fn clone(&self) -> Self{
+        match self{
+            BoardState::X => return BoardState::X,
+            BoardState::O => return BoardState::O,
+            BoardState::Empty => return BoardState::Empty,
+        }
+    }
+}
+
 impl Clone for TTTBoard{
     fn clone(&self) -> Self{
         let mut newboard = TTTBoard{..Default::default()};
         for row in self.board.iter().enumerate(){
             for state in row.1.iter().enumerate(){
                 match state.1{
-                    a => newboard.board[row.0][state.0] = *a,
+                    a => newboard.board[row.0][state.0] = a.clone(),
                 }
-                //
             }
         }
         return newboard;
@@ -31,9 +42,13 @@ impl PartialEq for BoardState{
     fn eq(&self, other : &Self) -> bool{
         let f: i8;
         match self{
-            f => match other{
-                s => {if s == f{return true}}
-            }
+            BoardState::O => f = 1,
+            BoardState::X => f = 2,
+            BoardState::Empty => f = 0,
+        }match other{
+            BoardState::O => if f == 1 {return true},
+            BoardState::X => if f == 2 {return true},
+            BoardState::Empty => if f == 0 {return true},
         }
         return false
     }
@@ -102,10 +117,12 @@ impl TTTBoard{
     fn winner(&self) -> &BoardState{
         let mut seen;
         for row in self.board.iter(){
-            seen = &row[0];
+            seen = row[0].clone();
             for state in row.iter().enumerate(){
-                if *state.1 == *seen && state.0 == self.board.len()-1{
+                if *state.1 == seen && state.0 == self.board.len()-1{
                     return state.1;
+                }if *state.1 != seen{
+                    break;
                 }
             }
         }
@@ -187,56 +204,47 @@ fn minimax(board : &TTTBoard){
 
 
 fn eval(board : &mut TTTBoard, levels : usize, cstate : BoardState ) -> i8{
-    /**
-     * returns i8 
-     * 
-     * 0 = lose
-     * 1 = tie
-     * 2 = win 
-     * 
+    println!("{}", board);
+    /*
+     * lose = 0
+     * tie = 1
+     * win = 2
      */
     
-    if(board.full()){
-        match board.winner(){
-            BoardState::Empty => {return 1},
-            s => {
-                if cstate == *s{
-                    return 2
-                }
-                return 0
-            },
-        }
+    match board.winner(){
+        BoardState::Empty => {if board.full(){ return 1; }},
+        s => {if *s == cstate {return 2;} return 0;}
     }
     //          (best, (x, y))
     let mut best = (0, (0, 0));
-    for row in board.board.iter().enumerate(){
-        for state in row.1.iter().enumerate(){ //(index, object)
-            if *state.1 == BoardState::Empty{
+    let mut avail : Vec<(usize, usize)> = Vec::new();
+    for row in 0..board.board.len(){
+        for state in 0..board.board[0].len(){ //(index, object)
+            if board.board[row][state] == BoardState::Empty{
+                avail.push((row, state));
             }
         }
     }
-        board.board[row.0][state.0] = cstate;
+    for spot in avail.iter(){
+        board.make_move((spot.0,spot.1), cstate.clone());
         let result = eval(board, levels+1, cstate.opposite());
-        if result > best.0{
-            best = (result, (row.0, state.0));
-        }
+        board.make_move((spot.0,spot.1), BoardState::Empty);
         match cstate.opposite(){
-            BoardState::X =>{
-                if result == 0{
-                board.board[row.0][state.0] = BoardState::Empty;
-                }else if result == 2{
-                    return 2
+            BoardState::X =>{ // ai
+                if result > best.0{
+                    best = (result, (spot.0, spot.1));
+                }if result == 0{ // if ai lost
+                    return 0;
                 }
             },
-            BoardState::O =>{
-                if result == 2{
-                    board.board[row.0][state.0] = BoardState::Empty;
-                }else if result == 0{
-                    return 2
+            BoardState::O =>{ // player
+                if result == 2{ // if player won
+                    return 0;
                 }
             },
             _ => {}
-        }
+        } 
+    }
     return 0
 }
 
