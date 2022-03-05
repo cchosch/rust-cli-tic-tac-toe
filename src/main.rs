@@ -1,4 +1,3 @@
-#![recursion_limit= "260000"]
 use std::cmp::PartialEq;
 use std::io::{stdout, stdin, Write};
 use std::fmt;
@@ -126,10 +125,10 @@ impl TTTBoard{
     fn winner(&self) -> &BoardState{
         let mut seen;
         for row in self.board.iter(){
-            seen = row[0].clone();
-            if seen == BoardState::Empty{
+            if row[0] == BoardState::Empty{
                 continue
             }
+            seen = row[0].clone();
             for state in row.iter().enumerate(){
                 if *state.1 != seen{
                     break;
@@ -139,11 +138,11 @@ impl TTTBoard{
             }
         }
         for c in 0..self.board[0].len(){
-            seen = self.board[0][c].clone();
-            //println!("SEEN {} at 0, {}", seen,  c);
-            if seen == BoardState::Empty{
+            if self.board[0][c] == BoardState::Empty{
                 continue
             }
+            seen = self.board[0][c].clone();
+            //println!("SEEN {} at 0, {}", seen,  c);
             for r in 0..self.board.len(){
                 if self.board[r][c] != seen{
                     //println!("BREAKING {}", self.board[r][c]);
@@ -203,7 +202,12 @@ fn main() {
         board.make_move((x, y), BoardState::O);
         win_yet = board.winner();
         match *win_yet {
-            BoardState::Empty => {},
+            BoardState::Empty => {
+                if board.full() {
+                    println!("TIE");
+                    break;
+                }
+            },
             BoardState::O | BoardState::X => {
                 if *win_yet == BoardState::O{
                     println!("{}YOU WON\n", board);
@@ -214,13 +218,25 @@ fn main() {
             },
             
         }
-        if *win_yet != BoardState::Empty {
-            if board.full() {
-                println!("TIE");
-                break;
-            }
-        }
         minimax(&mut board);
+        win_yet = board.winner();
+        match *win_yet {
+            BoardState::Empty => {
+                if board.full() {
+                    println!("TIE");
+                    break;
+                }
+            },
+            BoardState::O | BoardState::X => {
+                if *win_yet == BoardState::O{
+                    println!("{}YOU WON\n", board);
+                }else {
+                    println!("{}You Lost\n", board);
+                }
+                break;
+            },
+            
+        }
         println!("{}", board);
         if line == "q"{
             break;
@@ -234,13 +250,14 @@ fn minimax(board : &mut TTTBoard){
     let mut boardc = board.clone();
     let mut res;
     let mut best = (0, (0, 0));
+    let mut d = 0;
     for r in 0..boardc.board.len(){
         for s in 0..board.board[r].len(){
             if board.board[r][s] != BoardState::Empty{
                 continue
             }
             boardc.make_move((r, s), BoardState::X);
-            res = eval(&mut boardc, BoardState::X);
+            res = eval(&mut boardc, BoardState::O, false);
             if res > best.0{
                 best = (res, (r, s));
                 if res == 2{
@@ -251,13 +268,13 @@ fn minimax(board : &mut TTTBoard){
             boardc.make_move((r, s), BoardState::Empty);
         }
     }
-    
+    boardc.make_move((best.1.0, best.1.1), BoardState::X);
     board.copy(&boardc);
     return
 }
 
 
-fn eval(board : &mut TTTBoard, cstate : BoardState) -> i8{
+fn eval(board : &mut TTTBoard, cplayer : BoardState, max :bool) -> i8{
     /*
      * lose = 0
      * tie = 1
@@ -267,39 +284,42 @@ fn eval(board : &mut TTTBoard, cstate : BoardState) -> i8{
     match board.winner(){
         BoardState::Empty => {if board.full(){ return 1; }},
         s => {
-            //println!("RESULT {}, ACTUAL {}", *s, cstate);
-            if *s == cstate {
-                return 2;
+            if max { 
+                if *s == cplayer{
+                    return 2;
+                }
+                return 0;
             }
-            return 0;
-        }
-    }
-    //          (best, (x, y))
-    let mut best = (2, (0, 0));
-    let mut avail : Vec<(usize, usize)> = Vec::new();
-    for row in 0..board.board.len(){
-        for state in 0..board.board[0].len(){ //(index, object)
-            if board.board[row][state] == BoardState::Empty{
-                avail.push((row, state));
+            if *s == cplayer{
+                return 0;
             }
-        }
-    }
-    for spot in avail.iter(){
-        board.make_move((spot.0,spot.1), cstate.clone());
-        let result = eval(board, cstate.opposite());
-        if result < best.0{
-            best = (result, (spot.0, spot.1));
-        }
-        board.make_move((spot.0,spot.1), BoardState::Empty);
-    }
-    match best.0{
-        0 => {
             return 2;
         },
-        2 => {
-            return 0;
-        }
-        r => {return r}
     }
+    //          (best, (x, y))
+    let mut optimal: i8 = 0;
+    if !max{
+        optimal = 2;
+    }
+    let mut result: i8;
+    for row in 0..board.board.len(){
+        for column in 0..board.board[0].len(){
+            if board.board[row][column] == BoardState::Empty{
+                board.make_move((row, column), cplayer.clone());
+                result = eval(board, cplayer.opposite(), !max);
+                board.make_move((row, column), BoardState::Empty);
+                if max{ 
+                    if result > optimal{
+                        optimal = result;
+                    }
+                }else{ 
+                    if result < optimal{
+                        optimal = result;
+                    }
+                }
+            }
+        }
+    }
+    return optimal
 }
 
