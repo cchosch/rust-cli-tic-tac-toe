@@ -103,15 +103,6 @@ impl TTTBoard{
     fn make_move(&mut self, pos: (usize, usize), newstate: BoardState) {
         self.board[pos.0][pos.1] = newstate;
     }
-    fn copy(&mut self, other : &Self) {
-        for r in other.board.iter().enumerate(){
-            for s in r.1.iter().enumerate(){
-                match s.1{
-                    default => {self.board[r.0][s.0] = default.clone()}
-                }
-            }
-        }
-    }
     fn full(&self) -> bool{
         for row in self.board.iter(){
             for s in row.iter(){
@@ -293,17 +284,17 @@ fn eval(board : &mut TTTBoard, cplayer : BoardState, max :bool) -> i8{
     match board.winner(){
         BoardState::Empty => {if board.full(){ return 1; }},
         s => {
-            if max { 
-                // if we 
+            if max { // if we are evaluating maximizing player
                 if *s == cplayer{
-                    return 2;
+                    return 2; // maximizing player won and we return 2
                 }
-                return 0;
+                return 0; // maximizing player lost and we return 0;
             }
-            if *s == cplayer{
-                return 0;
+            // if we are evaluating minimizing player
+            if *s == cplayer{ 
+                return 0; // minimizing player won and we return 0;
             }
-            return 2;
+            return 2; // maximining player lost and we return 2
         },
     }
     //          (best, (x, y))
