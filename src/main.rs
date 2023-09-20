@@ -1,95 +1,58 @@
 use std::cmp::PartialEq;
 use std::io::{stdout, stdin, Write};
-use std::fmt;
+use std::fmt::{self, Display};
 
-
+#[derive(PartialEq, Eq, Clone, Debug)]
 enum BoardState  {
     Empty,
     O,
     X
 }
 
+#[derive(Clone)]
 struct TTTBoard {
     board :[[BoardState; 3]; 3],
 }
 
-impl Clone for BoardState{
-    fn clone(&self) -> Self{
-        match self{
-            BoardState::X => return BoardState::X,
-            BoardState::O => return BoardState::O,
-            BoardState::Empty => return BoardState::Empty,
-        }
-    }
-}
-
-impl Clone for TTTBoard{
-    fn clone(&self) -> Self{
-        let mut newboard = TTTBoard{..Default::default()};
-        for row in self.board.iter().enumerate(){
-            for state in row.1.iter().enumerate(){
-                match state.1{
-                    a => newboard.board[row.0][state.0] = a.clone(),
-                }
-            }
-        }
-        return newboard;
-    }
-}
-
-impl PartialEq for BoardState{
-    fn eq(&self, other : &Self) -> bool{
-        let f: i8;
-        match self{
-            BoardState::O => f = 1,
-            BoardState::X => f = 2,
-            BoardState::Empty => f = 0,
-        }match other{
-            BoardState::O => if f == 1 {return true},
-            BoardState::X => if f == 2 {return true},
-            BoardState::Empty => if f == 0 {return true},
-        }
-        return false
-    }
-}
-
-
 impl Default for TTTBoard{
     fn default() -> TTTBoard {
         TTTBoard{
-            board: [[BoardState::Empty,BoardState::Empty,BoardState::Empty],[BoardState::Empty,BoardState::Empty,BoardState::Empty],[BoardState::Empty,BoardState::Empty,BoardState::Empty]] 
+            board: [
+                [BoardState::Empty,BoardState::Empty,BoardState::Empty],
+                [BoardState::Empty,BoardState::Empty,BoardState::Empty],
+                [BoardState::Empty,BoardState::Empty,BoardState::Empty]
+            ]
         }
     }
 }
 
 
-impl fmt::Display for TTTBoard{
+impl Display for TTTBoard{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
-        writeln!(f, "-------------").ok();
-        for row in self.board.iter(){
-            write!(f, "|").ok();
+        writeln!(f, "-------------")?;
+        for (i, row) in self.board.iter().enumerate(){
+            write!(f, "|")?;
             for state in row.iter(){
-                write!(f, " {} |", state).ok();
+                write!(f, " {} |", state)?;
             }
-            writeln!(f, "\n-------------").ok();
+            write!(f, "\n-------------{}", if i == self.board.len()-1 {""} else { "\n" })?;
         }
         return Ok(())
     }
 }
 
 
-impl fmt::Display for BoardState{
+impl Display for BoardState{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result{
         match self{
             BoardState::Empty => write!(f, " "),
             BoardState::X => write!(f, "X"),
             BoardState::O => write!(f, "O"),
         }
-        
     }
 }
 
-impl BoardState{
+impl BoardState {
     fn opposite(&self) -> BoardState{
         match self{
             BoardState::O => return BoardState::X,
@@ -103,19 +66,22 @@ impl TTTBoard{
     fn make_move(&mut self, pos: (usize, usize), newstate: BoardState) {
         self.board[pos.0][pos.1] = newstate;
     }
+
     fn full(&self) -> bool{
         for row in self.board.iter(){
             for s in row.iter(){
-                if *s == BoardState::Empty{
+                if s == &BoardState::Empty{
                     return false
                 }
             }
         }
         return true
     }
-    fn winner(&self) -> &BoardState{
+
+    fn winner(&self) -> Option<BoardState>{
         let mut seen;
-        for row in self.board.iter(){
+        // left to right
+        for row in self.board.iter() {
             if row[0] == BoardState::Empty{
                 continue
             }
@@ -124,10 +90,11 @@ impl TTTBoard{
                 if *state.1 != seen{
                     break;
                 }if state.0 == self.board.len()-1{
-                    return state.1;
+                    return Some(state.1.clone());
                 }
             }
         }
+        // top to bottom
         for c in 0..self.board[0].len(){
             if self.board[0][c] == BoardState::Empty{
                 continue
@@ -140,17 +107,20 @@ impl TTTBoard{
                     break;
                 }if r == self.board.len()-1{
                     //println!("RETURNING {}", self.board[r][c]);
-                    return &self.board[r][c];
+                    return Some(self.board[r][c].clone());
                 }
             }
         }
-        if self.board[0][0] == self.board[1][1] && self.board[1][1] == self.board[2][2]{
-            return &self.board[0][0];
-        }else if self.board[0][2] == self.board[1][1] && self.board[1][1] == self.board[2][0]{
-            return &self.board[1][1];
+        if self.board[1][1] != BoardState::Empty {
+            // diagonal
+            if self.board[0][0] == self.board[1][1] && self.board[1][1] == self.board[2][2]{
+                return Some(self.board[0][0].clone());
+            }else if self.board[0][2] == self.board[1][1] && self.board[1][1] == self.board[2][0]{
+                return Some(self.board[1][1].clone());
+            }
         }
             
-        return &BoardState::Empty;
+        return if self.full() { Some(BoardState::Empty) } else {None};
     }
 }
 
@@ -158,10 +128,10 @@ impl TTTBoard{
 fn main() {
     println!("Tic tac toe in Rust vs UNBEATABLE AI");
     // initialize vars
-    let mut line;
-    let mut board = TTTBoard{.. Default::default()};
-    let mut x; 
-    let mut y;
+    let mut line: String;
+    let mut board = TTTBoard::default();
+    let mut x: usize; 
+    let mut y: usize;
     let mut win_yet;
 
     // display x, y format
@@ -201,48 +171,40 @@ fn main() {
             Err(_) => continue,
         }
 
+        if board.board[x][y] != BoardState::Empty {
+            println!("Invalid move, try again");
+            continue;
+        }
         // make given move as the player, (O)
         board.make_move((x, y), BoardState::O);
+
         // check if there is a winner
         win_yet = board.winner();
         match win_yet {
-            BoardState::Empty => { // if board.winner() return Empty
-                if board.full() { // if the board is full
-                    println!("TIE");
-                    // break the gameloop
-                    break;
-                }
-            },
-            _ => { // any other state
-                if *win_yet == BoardState::O{
-                    println!("{}YOU WON\n", board);
-                }else {
-                    println!("{}You Lost\n", board);
-                }
-                // break the gameloop
-                break;
-            },
+            Some(val) => {
+                println!("{}", match val {
+                    BoardState::Empty => "TIE".to_string(),
+                    BoardState::O => format!("{}\nYOU WON", board),
+                    BoardState::X => format!("{}\nYOU Lost :(", board),
+                });
+                break
+            }
+            _ => {}
         }
         // make computer move
         minimax(&mut board);
         // check winner again
         win_yet = board.winner();
         match win_yet {
-            BoardState::Empty => {
-                if board.full() {
-                    println!("TIE");
-                    break;
-                }
-            },
-            _ => {
-                if *win_yet == BoardState::O{
-                    println!("{}YOU WON\n", board);
-                }else {
-                    println!("{}You Lost\n", board);
-                }
-                break;
-            },
-            
+            Some(val) => {
+                println!("{}", match val {
+                    BoardState::Empty => "TIE".to_string(),
+                    BoardState::O => format!("{}\nYOU WON", board),
+                    BoardState::X => format!("{}\nYOU Lost :(", board),
+                });
+                break
+            }
+            _ => {}
         }
         println!("{}", board);
     }
@@ -251,6 +213,9 @@ fn main() {
 
 
 fn minimax(board : &mut TTTBoard){
+    if board.full() {
+        return;
+    }
     let mut res;
     let mut best = (0, (0, 0));
     for r in 0..board.board.len(){
@@ -282,20 +247,24 @@ fn eval(board : &mut TTTBoard, cplayer : BoardState, max :bool) -> i8{
      */
     // check winner
     match board.winner(){
-        BoardState::Empty => {if board.full(){ return 1; }},
-        s => {
+        Some(s) => {
+            if s == BoardState::Empty {
+                return 1;
+            }
+
             if max { // if we are evaluating maximizing player
-                if *s == cplayer{
+                if s == cplayer{
                     return 2; // maximizing player won and we return 2
                 }
                 return 0; // maximizing player lost and we return 0;
             }
             // if we are evaluating minimizing player
-            if *s == cplayer{ 
+            if s == cplayer{ 
                 return 0; // minimizing player won and we return 0;
             }
             return 2; // maximining player lost and we return 2
-        },
+        }
+        _=>{}
     }
     //          (best, (x, y))
     let mut optimal: i8 = 0; // initialize optimal variable
@@ -314,18 +283,13 @@ fn eval(board : &mut TTTBoard, cplayer : BoardState, max :bool) -> i8{
                 result = eval(board, cplayer.opposite(), !max);
                 // reverse move
                 board.make_move((row, column), BoardState::Empty);
-                if max{ // if we are maximizing player
-                    if result > optimal{ // maximize optimal
-                        optimal = result;
-                    }
-                }else{ // if we are minimizing player
-                    if result < optimal{ // minimize optimal
-                        optimal = result;
-                    }
+                if max { // if we are maximizing player
+                    optimal = optimal.max(result);
+                } else { // if we are minimizing player
+                    optimal = optimal.min(result);
                 }
             }
         }
     }
     return optimal // return 
 }
-
